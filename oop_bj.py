@@ -99,7 +99,7 @@ class Hand:
 
     def __str__(self):
         return "{} ({})".format(
-            "".join("[{}]".format(card) for card in self.cards), self.score()
+            "".join("[{}]".format(card.value) for card in self.cards), self.score()
         )
 
 
@@ -109,9 +109,7 @@ class Player:
     budget: int  # Number of money for bets
     bet: int = attr.ib(default=None)  # Money bet
     hand: Hand = attr.ib(factory=Hand)  # Player's hand
-    state: State = attr.ib(
-        default=State.IDLE
-    )  # Player's state (can be IDLE, ACTIVE, STAND or BUST)
+    state: State = attr.ib(default=State.IDLE)  # can be IDLE, ACTIVE, STAND or BUST
 
     def player_bet(self):
         self.bet = ask_bet(self.budget)
@@ -155,10 +153,7 @@ class Player:
             self.state = State.STAND
 
     def __str__(self):
-        return (
-            f"Player Info:\nBudget: {self.budget}\nMoney bet: {self.bet}\n"
-            f"State: {self.state.name.capitalize()}\nHand: {self.hand}"
-        )
+        return f"Player Info:\nBudget: {self.budget}\nMoney bet: {self.bet}\nHand: {self.hand}"
 
 
 @lock
@@ -215,10 +210,10 @@ class Dealer:
                 break
 
     def display_cards(self, player, game):
-        if player.state == State.ACTIVE:
-            return f"Dealer Info:\nHand: [{self.hand.cards[0]}][?]"
-        elif game.is_finished():
+        if game.is_finished():
             return f"Dealer Info:\nHand:{self.hand}"
+        elif player.state == State.ACTIVE:
+            return f"Dealer Info:\nHand: [{self.hand.cards[0]}][?]"
 
 
 @lock
@@ -226,6 +221,14 @@ class Game:
 
     player: Player
     dealer: Dealer = attr.ib(factory=Dealer)
+
+    def reset_attributes(self):
+        self.player.hand.cards = []
+        self.player.state = State.IDLE
+        self.dealer.hand.cards = []
+        self.dealer.state = State.IDLE
+        self.dealer.shoe = Shoe()
+        self.dealer.shoe.shuffle()
 
     def open(self):
         if self.player.is_broke():
@@ -253,7 +256,6 @@ class Game:
             return True
         if self.player.is_busted() or self.player.is_standing():
             return True
-        return False
 
     """ Pay/charge the player according to cards result
         Reset hands, states, shoe
@@ -270,15 +272,6 @@ class Game:
                     self.player.budget -= self.player.bet
                 elif self.player.hand.score() > dealer_score:
                     self.player.budget += self.player.bet * 2
-
-        self.display_info()
-
-        self.player.hand.cards = []  # Player returns cards to shoe
-        self.player.state = State.IDLE  # Player is now idle and free to join a new game
-        self.dealer.hand.cards = []  # Dealer returns cards to shoe
-        self.dealer.state = State.IDLE  # Dealer is now idle too
-        self.dealer.shoe = Shoe()  # Return all cards to dealer
-        self.dealer.shoe.shuffle()  # A new shuffle of the deck
 
     def run(self):
         # Run a full game, from open() to close()
@@ -326,10 +319,12 @@ class Game:
 def main():
     playing = True
     p = Player(1000)
+    g = Game(p)
     while playing:
-        g = Game(p)
         g.run()
-        playing = ask_question("Do you want to play again")
+        playing = ask_question("\nDo you want to play again")
+        if playing:
+            g.reset_attributes()
 
 
 if __name__ == "__main__":
