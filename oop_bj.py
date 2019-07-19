@@ -202,11 +202,7 @@ class Dealer:
         while True:
             player.play(self)
             game.display_info()
-            if player.is_busted():
-                player.budget -= player.bet
-                player.hand.cards = []
-                break
-            if player.is_standing():
+            if player.is_busted() or player.is_standing():
                 break
 
     def display_cards(self, player, game):
@@ -264,13 +260,17 @@ class Game:
         dealer_score = self.dealer.hand.score()
         if not self.player.is_busted():
 
-            if dealer_score > 21:
+            if self.dealer.state == State.BUST:
                 self.player.budget += self.player.bet * 2
             else:
                 if self.player.hand.score() < dealer_score:
                     self.player.budget -= self.player.bet
                 elif self.player.hand.score() > dealer_score:
                     self.player.budget += self.player.bet * 2
+        else:
+            self.player.budget -= self.player.bet
+
+        self.display_info()
 
     def run(self):
         # Run a full game, from open() to close()
