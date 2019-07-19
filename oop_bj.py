@@ -3,11 +3,19 @@ import typing as t
 from enum import Enum
 from functools import partial
 import os
+from getpass import getpass
+from re import match
+from bcrypt import hashpw, gensalt
+import psycopg2
 import attr
 
 
 lock = partial(attr.s, auto_attribs=True, slots=True)
 State = Enum("State", "IDLE ACTIVE STAND BUST")
+
+
+def clear_console():
+    os.system("cls" if os.name == "nt" else "clear")
 
 
 def ask_question(question):
@@ -16,10 +24,6 @@ def ask_question(question):
         ans = input("> ").casefold()
         if ans in ("y", "n"):
             return ans == "y"
-
-
-def clear_console():
-    os.system("cls" if os.name == "nt" else "clear")
 
 
 def ask_bet(budget):
@@ -35,6 +39,17 @@ def ask_bet(budget):
         if budget >= cash_bet > 0:
             return cash_bet
         print("Please input a valid bet.")
+
+
+def get_user_credentials():
+    while True:
+        email = input("Email address (max. 255 chars.):\n> ")
+        password = getpass("Password (max. 1000 chars.):\n> ")
+        hashed_pw = hashpw(password, gensalt())
+        if len(email) < 255 and len(password) < 1000:
+            if match(r"[^@]+@[^@]+\.[^@]+", email):
+                return email, password, hashed_pw
+            print("Please input a valid email address.")
 
 
 def build_deck():
@@ -311,6 +326,17 @@ class Game:
                 print("Dealer has beaten you. You lost!")
             else:
                 print("Push. Nobody wins or losses.")
+
+
+@lock
+class Database:
+
+    email: str = attr.ib(default=None)
+    password: str = attr.ib(default=None)
+    hashed_pw: str = attr.ib(default=None)
+
+    def init_credentials(self):
+        self.email, self.password, hashed_pw = get_user_credentials()
 
 
 def main():
