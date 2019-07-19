@@ -228,7 +228,6 @@ class Game:
         self.dealer.hand.cards = []
         self.dealer.state = State.IDLE
         self.dealer.shoe = Shoe()
-        self.dealer.shoe.shuffle()
 
     def open(self):
         if self.player.is_broke():
