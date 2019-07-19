@@ -71,8 +71,6 @@ class Shoe:
         random.shuffle(self.cards)
 
     def draw_card(self):
-        if not self.cards:
-            raise Exception("No more cards: empty deck!")
         return self.cards.pop()
 
     def __str__(self):
