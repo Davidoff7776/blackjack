@@ -135,6 +135,8 @@ class Player:
     state: State = attr.ib(default=State.IDLE)  # can be IDLE, ACTIVE, STAND or BUST
 
     def player_bet(self):
+        if self.is_broke():
+            raise Exception("Unfortunately you don't have any money.")
         self.bet = ask_bet(self.budget)
 
     """ Update self.state after self.hit
@@ -314,8 +316,6 @@ class Game:
         self.dealer.shoe = Shoe()
 
     def open(self):
-        if self.player.is_broke():
-            raise Exception("Unfortunately you don't have any money.")
 
         self.player.player_bet()
 
