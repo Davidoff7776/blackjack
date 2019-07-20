@@ -5,7 +5,7 @@ from functools import partial
 import os
 from getpass import getpass
 from re import match
-from bcrypt import hashpw, gensalt
+import bcrypt
 import psycopg2
 import attr
 
@@ -18,9 +18,18 @@ def clear_console():
     os.system("cls" if os.name == "nt" else "clear")
 
 
+def start_choice():
+    while True:
+        ans = input(
+            "\nWhat do you want to do?\n[1] - Start playing\n[2] - Display the top\n> "
+        )
+        if ans in ("1", "2"):
+            return ans == "1"
+
+
 def ask_question(question):
     while True:
-        print(f"{question} [y/n]?")
+        print(f"{question} (y/n)?")
         ans = input("> ").casefold()
         if ans in ("y", "n"):
             return ans == "y"
@@ -42,10 +51,11 @@ def ask_bet(budget):
 
 
 def get_user_credentials():
+    clear_console()
     while True:
         email = input("Email address (max. 255 chars.):\n> ")
-        password = getpass("Password (max. 1000 chars.):\n> ")
-        hashed_pw = hashpw(password, gensalt())
+        password = getpass("Password (max. 1000 chars.):\n> ").encode("utf8")
+        hashed_pw = bcrypt.hashpw(password, bcrypt.gensalt()).decode("utf8")
         if len(email) < 255 and len(password) < 1000:
             if match(r"[^@]+@[^@]+\.[^@]+", email):
                 return email, password, hashed_pw
@@ -226,6 +236,71 @@ class Dealer:
 
 
 @lock
+class Database:
+
+    sql_id: int = attr.ib(default=None)
+    email: str = attr.ib(default=None)
+    password: str = attr.ib(default=None)
+    hashed_pw: str = attr.ib(default=None)
+    budget: int = attr.ib(default=None)
+    conn: t.Any = attr.ib(
+        default=psycopg2.connect(
+            dbname="blackjack", user="postgres", password="12344321", host="localhost"
+        )
+    )
+    cur: t.Any = attr.ib(default=None)
+
+    def check_account(self):
+        self.cur.execute("SELECT id FROM users WHERE email=%s", (self.email,))
+        return bool(self.cur.fetchone())
+
+    def login(self):
+        self.cur.execute("SELECT password FROM users WHERE email=%s", (self.email,))
+        credentials = self.cur.fetchone()
+        correct_hash = credentials[0].encode("utf8")
+        if bcrypt.checkpw(self.password, correct_hash):
+            print("You have successfully logged-in!")
+        else:
+            raise Exception("You have failed logging-in!")
+
+    def register(self):
+        self.cur.execute(
+            "INSERT into users (email, password) VALUES (%s, %s)",
+            (self.email, self.hashed_pw),
+        )
+
+    def initialize(self):
+        with self.conn:
+            self.email, self.password, self.hashed_pw = get_user_credentials()
+            self.cur = self.conn.cursor()
+            checked = self.check_account()
+            if checked:
+                self.login()
+            else:
+                self.register()
+                print("You have successfully registered and received $1000 as a gift!")
+            self.cur.execute(
+                "SELECT ID, budget FROM users WHERE email=%s", (self.email,)
+            )
+            sql_id_budget = self.cur.fetchone()
+            self.sql_id = sql_id_budget[0]
+            self.budget = sql_id_budget[1]
+
+    def display_top(self):
+        self.cur.execute("SELECT email, budget FROM users ORDER BY budget DESC")
+        top = self.cur.fetchall()
+        places = range(1, len(top) + 1)
+        for (a, b), i in zip(top, places):
+            print(f"{i}. {a} - ${b}")
+
+    def update_budget(self):
+        self.cur.execute(
+            "UPDATE users SET budget=%s WHERE id=%s", (self.budget, self.sql_id)
+        )
+        self.conn.commit()
+
+
+@lock
 class Game:
 
     player: Player
@@ -328,26 +403,24 @@ class Game:
                 print("Push. Nobody wins or losses.")
 
 
-@lock
-class Database:
-
-    email: str = attr.ib(default=None)
-    password: str = attr.ib(default=None)
-    hashed_pw: str = attr.ib(default=None)
-
-    def init_credentials(self):
-        self.email, self.password, hashed_pw = get_user_credentials()
-
-
 def main():
-    playing = True
-    p = Player(1000)
-    g = Game(p)
-    while playing:
-        g.run()
-        playing = ask_question("\nDo you want to play again")
-        if playing:
-            g.reset_attributes()
+    database = Database()
+    database.initialize()
+    if start_choice():
+        player = Player(database.budget)
+        game = Game(player)
+        playing = True
+        while playing:
+            game.run()
+            database.budget = player.budget
+            database.update_budget()
+            playing = ask_question("\nDo you want to play again")
+            if playing:
+                game.reset_attributes()
+            else:
+                database.cur.close()
+    else:
+        database.display_top()
 
 
 if __name__ == "__main__":
