@@ -244,10 +244,14 @@ class Database:
     hashed_pw: str
     sql_id: int = attr.ib(default=None)
     budget: int = attr.ib(default=None)
-    conn: t.Any = attr.ib(default=psycopg2.connect(dbname=os.environ["BLACKJACK_DB_NAME"],
-                                                   user=os.environ["BLACKJACK_DB_USER"],
-                                                   password=os.environ["BLACKJACK_DB_PASS"],
-                                                   host=os.environ["BLACKJACK_DB_HOST"]))
+    conn: t.Any = attr.ib(
+        default=psycopg2.connect(
+            dbname=os.environ["BLACKJACK_DB_NAME"],
+            user=os.environ["BLACKJACK_DB_USER"],
+            password=os.environ["BLACKJACK_DB_PASS"],
+            host=os.environ["BLACKJACK_DB_HOST"],
+        )
+    )
     cur: t.Any = attr.ib(default=None)
 
     def check_account(self):
