@@ -239,16 +239,15 @@ class Dealer:
 @attrs
 class Database:
 
+    email: str
+    password: str
+    hashed_pw: str
     sql_id: int = attr.ib(default=None)
-    email: str = attr.ib(default=None)
-    password: str = attr.ib(default=None)
-    hashed_pw: str = attr.ib(default=None)
     budget: int = attr.ib(default=None)
-    conn: t.Any = attr.ib(
-        default=psycopg2.connect(
-            dbname="blackjack", user="postgres", password="12344321", host="localhost"
-        )
-    )
+    conn: t.Any = attr.ib(default=psycopg2.connect(dbname=os.environ["BLACKJACK_DB_NAME"],
+                                                   user=os.environ["BLACKJACK_DB_USER"],
+                                                   password=os.environ["BLACKJACK_DB_PASS"],
+                                                   host=os.environ["BLACKJACK_DB_HOST"]))
     cur: t.Any = attr.ib(default=None)
 
     def check_account(self):
@@ -272,7 +271,6 @@ class Database:
 
     def initialize(self):
         with self.conn:
-            self.email, self.password, self.hashed_pw = get_user_credentials()
             self.cur = self.conn.cursor()
             checked = self.check_account()
             if checked:
@@ -401,7 +399,8 @@ class Game:
 
 
 def main():
-    database = Database()
+    email, password, hashed_pw = get_user_credentials()
+    database = Database(email, password, hashed_pw)
     database.initialize()
     if start_choice():
         player = Player(database.budget)
