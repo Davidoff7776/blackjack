@@ -77,7 +77,7 @@ class Card:
     suit: str
 
     def score(self):
-        if self.value in "JQK":
+        if self.value in ("J", "Q", "K"):
             return 10
         elif self.value == "A":
             return 1
