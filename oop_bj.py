@@ -1,16 +1,18 @@
+import os
 import random
 import typing as t
 from enum import Enum
 from functools import partial
-import os
+from itertools import product
 from getpass import getpass
 from re import match
+
+import attr
 import bcrypt
 import psycopg2
-import attr
 
 
-lock = partial(attr.s, auto_attribs=True, slots=True)
+attrs = partial(attr.s, auto_attribs=True, slots=True)
 State = Enum("State", "IDLE ACTIVE STAND BUST")
 
 
@@ -30,7 +32,7 @@ def start_choice():
 def ask_question(question):
     while True:
         print(f"{question} (y/n)?")
-        ans = input("> ").casefold()
+        ans = input("> ").lower()
         if ans in ("y", "n"):
             return ans == "y"
 
@@ -63,13 +65,12 @@ def get_user_credentials():
 
 
 def build_deck():
-    suits = ["Hearts", "Clubs", "Diamonds", "Spades"]
-    values = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
-    cards = [Card(value, suit) for value in values for suit in suits]
-    return cards
+    suits = ("Hearts", "Clubs", "Diamonds", "Spades")
+    values = ("2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A")
+    return [Card(value, suit) for value, suit in product(values, suits)]
 
 
-@lock
+@attrs
 class Card:
 
     value: str
@@ -87,7 +88,7 @@ class Card:
         return f"{self.value} of {self.suit}"
 
 
-@lock
+@attrs
 class Shoe:
 
     cards: t.List[Card] = attr.ib(factory=build_deck)
@@ -103,7 +104,7 @@ class Shoe:
         return str(cards)
 
 
-@lock
+@attrs
 class Hand:
     # A collection of cards that a player get from the dealer in a game
     cards: t.List[Card] = attr.ib(default=[])
@@ -126,7 +127,7 @@ class Hand:
         )
 
 
-@lock
+@attrs
 class Player:
 
     budget: int  # Number of money for bets
@@ -139,11 +140,10 @@ class Player:
             raise Exception("Unfortunately you don't have any money.")
         self.bet = ask_bet(self.budget)
 
-    """ Update self.state after self.hit
-        If player busted, self.state = State.BUST, etc.
-    """
-
     def update(self):
+        """ Update self.state after self.hit
+        If player busted, self.state = State.BUST, etc.
+        """
         hand_score = self.hand.score()
         if hand_score > 21:
             self.state = State.BUST
@@ -181,7 +181,7 @@ class Player:
         return f"Player Info:\nBudget: {self.budget}\nMoney bet: {self.bet}\nHand: {self.hand}"
 
 
-@lock
+@attrs
 class Dealer:
 
     shoe: Shoe = attr.ib(factory=Shoe)
@@ -219,11 +219,10 @@ class Dealer:
             self.hit()
             self.update()
 
-    """ In this method, the dealer and player enter a loop
-        In which the player hits a card from the dealer until it stands or busts
-    """
-
     def deal(self, player, game):
+        """ In this method, the dealer and player enter a loop in which the
+        player gets a card from the dealer until it stands or busts.
+        """
         while True:
             player.play(self)
             game.display_info()
@@ -237,7 +236,7 @@ class Dealer:
             return f"Dealer Info:\nHand: [{self.hand.cards[0]}][?]"
 
 
-@lock
+@attrs
 class Database:
 
     sql_id: int = attr.ib(default=None)
@@ -302,13 +301,14 @@ class Database:
         self.conn.commit()
 
 
-@lock
+@attrs
 class Game:
 
     player: Player
     dealer: Dealer = attr.ib(factory=Dealer)
 
     def reset_attributes(self):
+        # Reset hands, states, shoe
         self.player.hand.cards = []
         self.player.state = State.IDLE
         self.dealer.hand.cards = []
@@ -340,11 +340,8 @@ class Game:
         if self.player.is_busted() or self.player.is_standing():
             return True
 
-    """ Pay/charge the player according to cards result
-        Reset hands, states, shoe
-    """
-
     def close(self):
+        # Pay/charge the player according to cards result
         dealer_score = self.dealer.hand.score()
         if not self.player.is_busted():
 
