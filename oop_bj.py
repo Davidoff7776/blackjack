@@ -3,8 +3,8 @@ import random
 import typing as t
 from enum import Enum
 from functools import partial
-from itertools import product
 from getpass import getpass
+from itertools import product
 from re import match
 
 import attr
@@ -187,7 +187,7 @@ class Dealer:
     shoe: Shoe = attr.ib(factory=Shoe)
     hand: Hand = attr.ib(factory=Hand)
     state: State = attr.ib(default=State.IDLE)
-    DEALER_MINIMUM_SCORE: int = attr.ib(default=17)
+    MINIMUM_SCORE: int = attr.ib(default=17)
 
     def draw_card(self):  # Delegate method
         card = self.shoe.draw_card()
@@ -201,7 +201,7 @@ class Dealer:
         hand_score = self.hand.score()
         if hand_score > 21:
             self.state = State.BUST
-        elif hand_score >= self.DEALER_MINIMUM_SCORE:
+        elif hand_score >= self.MINIMUM_SCORE:
             self.state = State.STAND
         else:
             self.state = State.ACTIVE
@@ -216,7 +216,7 @@ class Dealer:
         return self.state == State.IDLE
 
     def play(self):
-        if self.hand.score() < self.DEALER_MINIMUM_SCORE:
+        if self.hand.score() < self.MINIMUM_SCORE:
             self.hit()
             self.update()
 
