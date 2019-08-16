@@ -1,4 +1,3 @@
-import os
 import random
 import typing as t
 from enum import Enum
@@ -17,7 +16,7 @@ State = Enum("State", "IDLE ACTIVE STAND BUST")
 
 
 def clear_console():
-    os.system("cls" if os.name == "nt" else "clear")
+    print("\033[2J")
 
 
 def start_choice():
@@ -57,10 +56,9 @@ def get_user_credentials():
     while True:
         email = input("Email address (max. 255 chars.):\n> ")
         password = getpass("Password (max. 1000 chars.):\n> ").encode("utf8")
-        hashed_pw = bcrypt.hashpw(password, bcrypt.gensalt()).decode("utf8")
-        if len(email) < 255 and len(password) < 1000:
+        if len(email) < 255 and 1000 > len(password) > 1:
             if match(r"[^@]+@[^@]+\.[^@]+", email):
-                return email, password, hashed_pw
+                return email, password
             print("Please input a valid email address.")
 
 
@@ -242,17 +240,9 @@ class Database:
 
     email: str
     password: str
-    hashed_pw: str
     sql_id: int = attr.ib(default=None)
     budget: int = attr.ib(default=None)
-    conn: t.Any = attr.ib(
-        default=psycopg2.connect(
-            dbname=os.environ["BLACKJACK_DB_NAME"],
-            user=os.environ["BLACKJACK_DB_USER"],
-            password=os.environ["BLACKJACK_DB_PASS"],
-            host=os.environ["BLACKJACK_DB_HOST"],
-        )
-    )
+    conn: t.Any = attr.ib(default=psycopg2.connect(""))
     cur: t.Any = attr.ib(default=None)
 
     def check_account(self):
@@ -269,9 +259,10 @@ class Database:
             raise Exception("You have failed logging-in!")
 
     def register(self):
+        hashed_pw = bcrypt.hashpw(self.password, bcrypt.gensalt()).decode("utf8")
         self.cur.execute(
             "INSERT into users (email, password) VALUES (%s, %s)",
-            (self.email, self.hashed_pw),
+            (self.email, hashed_pw),
         )
 
     def initialize(self):
@@ -404,8 +395,8 @@ class Game:
 
 
 def main():
-    email, password, hashed_pw = get_user_credentials()
-    database = Database(email, password, hashed_pw)
+    email, password = get_user_credentials()
+    database = Database(email, password)
     database.initialize()
     if start_choice():
         player = Player(database.budget)
