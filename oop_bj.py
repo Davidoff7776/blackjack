@@ -1,10 +1,12 @@
 import random
+import smtplib
 import typing as t
+from email.message import EmailMessage
 from enum import Enum
 from functools import partial
 from getpass import getpass
 from itertools import product
-from re import match
+from secrets import token_hex
 
 import attr
 import bcrypt
@@ -55,11 +57,27 @@ def get_user_credentials():
     clear_console()
     while True:
         email = input("Email address (max. 255 chars.):\n> ")
-        password = getpass("Password (max. 1000 chars.):\n> ").encode("utf8")
-        if len(email) < 255 and 1000 > len(password) > 1:
-            if match(r"[^@]+@[^@]+\.[^@]+", email):
-                return email, password
-            print("Please input a valid email address.")
+        password = getpass("Password (min. 6/max. 1000 chars.):\n> ").encode("utf8")
+        if len(email) < 255 and 1000 > len(password) > 5:
+            return email, password
+        print("Please input valid credentials.")
+
+
+def email_code(from_email, password, recipient):
+    email = EmailMessage()
+    email["Subject"] = "Blackjack game email confirmation"
+    email["From"] = from_email
+    email["To"] = recipient
+    message = token_hex(4)
+    email.set_content(message)
+
+    server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
+    server.ehlo()
+    server.login(from_email, password)
+    server.send_message(email)
+    server.quit()
+    print("\nThe email has been sent.")
+    return message
 
 
 def build_deck():
@@ -259,11 +277,23 @@ class Database:
             raise Exception("You have failed logging-in!")
 
     def register(self):
-        hashed_pw = bcrypt.hashpw(self.password, bcrypt.gensalt()).decode("utf8")
-        self.cur.execute(
-            "INSERT into users (email, password) VALUES (%s, %s)",
-            (self.email, hashed_pw),
-        )
+        while True:
+            try:
+                code = email_code(
+                    "blackjackgamebot@gmail.com", "tataiepetre", self.email
+                )
+                user_code = input("Please input the code sent to your email:\n>")
+                if code != user_code:
+                    raise Exception("Invalid code.")
+                hashed_pw = bcrypt.hashpw(self.password, bcrypt.gensalt()).decode(
+                    "utf8"
+                )
+                self.cur.execute(
+                    "INSERT into users (email, password) VALUES (%s, %s)",
+                    (self.email, hashed_pw),
+                )
+            except smtplib.SMTPRecipientsRefused:
+                self.email, self.password = get_user_credentials()
 
     def initialize(self):
         with self.conn:
