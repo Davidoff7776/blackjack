@@ -277,23 +277,19 @@ class Database:
             raise Exception("You have failed logging-in!")
 
     def register(self):
-        while True:
-            try:
-                code = email_code(
-                    "blackjackgamebot@gmail.com", "tataiepetre", self.email
-                )
-                user_code = input("Please input the code sent to your email:\n>")
-                if code != user_code:
-                    raise Exception("Invalid code.")
-                hashed_pw = bcrypt.hashpw(self.password, bcrypt.gensalt()).decode(
-                    "utf8"
-                )
-                self.cur.execute(
-                    "INSERT into users (email, password) VALUES (%s, %s)",
-                    (self.email, hashed_pw),
-                )
-            except smtplib.SMTPRecipientsRefused:
-                self.email, self.password = get_user_credentials()
+        code = email_code(
+            "blackjackgamebot@gmail.com", "tataiepetre", self.email
+        )
+        user_code = input("Please input the code sent to your email:\n>")
+        if code != user_code:
+            raise Exception("Invalid code.")
+        hashed_pw = bcrypt.hashpw(self.password, bcrypt.gensalt()).decode(
+            "utf8"
+        )
+        self.cur.execute(
+            "INSERT into users (email, password) VALUES (%s, %s)",
+            (self.email, hashed_pw),
+        )
 
     def initialize(self):
         with self.conn:
