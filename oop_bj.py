@@ -307,9 +307,8 @@ class Database:
     def display_top(self):
         self.cur.execute("SELECT email, budget FROM users ORDER BY budget DESC")
         top = self.cur.fetchall()
-        places = range(1, len(top) + 1)
-        for (a, b), i in zip(top, places):
-            print(f"{i}. {a} - ${b}")
+        for place, (a, b) in enumerate(top, start=1):
+            print(f"{place}. {a} - ${b}")
 
     def update_budget(self):
         self.cur.execute(
