@@ -59,7 +59,7 @@ def get_user_credentials():
     while True:
         email = input("Email address (max. 255 chars.):\n> ")
         password = getpass("Password (min. 6/max. 1000 chars.):\n> ").encode("utf8")
-        if len(email) < 255 and 1000 > len(password) > 5:
+        if len(email) < 255 and 1000 > len(password) > 5 and "@" in email:
             return email, password
         print("Please input valid credentials.")
 
