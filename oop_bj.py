@@ -363,12 +363,12 @@ class Game:
         if not self.player.is_busted():
 
             if self.dealer.state == State.BUST:
-                self.player.budget += self.player.bet * 2
+                self.player.budget += self.player.bet
             else:
                 if self.player.hand.score() < dealer_score:
                     self.player.budget -= self.player.bet
                 elif self.player.hand.score() > dealer_score:
-                    self.player.budget += self.player.bet * 2
+                    self.player.budget += self.player.bet
         else:
             self.player.budget -= self.player.bet
 
