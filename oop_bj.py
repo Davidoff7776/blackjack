@@ -1,12 +1,13 @@
+import os
 import random
-import smtplib
 import typing as t
-from email.message import EmailMessage
 from enum import Enum
 from functools import partial
 from getpass import getpass
 from itertools import product
 from secrets import token_hex
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 import attr
 import bcrypt
@@ -63,21 +64,21 @@ def get_user_credentials():
         print("Please input valid credentials.")
 
 
-def email_code(from_email, password, recipient):
-    email = EmailMessage()
-    email["Subject"] = "Blackjack game email confirmation"
-    email["From"] = from_email
-    email["To"] = recipient
-    message = token_hex(4)
-    email.set_content(message)
-
-    server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
-    server.ehlo()
-    server.login(from_email, password)
-    server.send_message(email)
-    server.quit()
-    print("\nThe email has been sent.")
-    return message
+def email_code(recipient):
+    code = token_hex(4)
+    message = Mail(
+        from_email="bot@blackjack",
+        to_emails=recipient,
+        subject="Blackjack Game Email Confirmation Code",
+        html_content=code,
+    )
+    try:
+        sg = SendGridAPIClient(os.environ.get("SENDGRID_API_KEY"))
+        sg.send(message)
+        print("The confirmation code has been sent to your email address.")
+        return code
+    except Exception as e:
+        print(str(e))
 
 
 def build_deck():
@@ -277,15 +278,11 @@ class Database:
             raise Exception("You have failed logging-in!")
 
     def register(self):
-        code = email_code(
-            "blackjackgamebot@gmail.com", "tataiepetre", self.email
-        )
+        code = email_code(self.email)
         user_code = input("Please input the code sent to your email:\n>")
         if code != user_code:
             raise Exception("Invalid code.")
-        hashed_pw = bcrypt.hashpw(self.password, bcrypt.gensalt()).decode(
-            "utf8"
-        )
+        hashed_pw = bcrypt.hashpw(self.password, bcrypt.gensalt()).decode("utf8")
         self.cur.execute(
             "INSERT into users (email, password) VALUES (%s, %s)",
             (self.email, hashed_pw),
