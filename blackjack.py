@@ -423,16 +423,15 @@ def main():
     if start_choice():
         player = Player(database.budget)
         game = Game(player)
-        playing = True
-        while playing:
+        while True:
             game.run()
             database.budget = player.budget
             database.update_budget()
-            playing = ask_question("\nDo you want to play again")
-            if playing:
+            if ask_question("\nDo you want to play again"):
                 game.reset_attributes()
             else:
                 database.cur.close()
+                break
     else:
         database.display_top()
 
