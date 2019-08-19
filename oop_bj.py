@@ -58,8 +58,8 @@ def get_user_credentials():
     clear_console()
     while True:
         email = input("Email address (max. 255 chars.):\n> ")
-        password = getpass("Password (min. 6/max. 1000 chars.):\n> ").encode("utf8")
-        if len(email) < 255 and 1000 > len(password) > 5 and "@" in email:
+        password = getpass("Password (min. 6/max. 72 chars.):\n> ").encode("utf8")
+        if len(email) < 255 and 73 > len(password) > 5 and "@" in email:
             return email, password
         print("Please input valid credentials.")
 
@@ -261,7 +261,7 @@ class Database:
     password: str
     sql_id: int = attr.ib(default=None)
     budget: int = attr.ib(default=None)
-    conn: t.Any = attr.ib(default=psycopg2.connect(""))
+    conn: t.Any = attr.ib(default=psycopg2.connect(""))  # env variables as credentials
     cur: t.Any = attr.ib(default=None)
 
     def check_account(self):
