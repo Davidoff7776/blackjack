@@ -386,10 +386,11 @@ class Game:
         self.dealer.deal(self.player, self)
 
         # Now the dealer's turn to play ...
-        while True:
-            self.dealer.play()
-            if self.dealer.is_busted() or self.dealer.is_standing():
-                break
+        if not self.player.is_busted():
+            while True:
+                self.dealer.play()
+                if self.dealer.is_busted() or self.dealer.is_standing():
+                    break
 
         self.close()
 
