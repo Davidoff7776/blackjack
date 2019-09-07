@@ -251,7 +251,7 @@ class Dealer:
         if game.is_finished():
             return f"Dealer Info:\nHand:{self.hand}"
         elif player.state == State.ACTIVE:
-            return f"Dealer Info:\nHand: [{self.hand.cards[0]}][?]"
+            return f"Dealer Info:\nHand: [{self.hand.cards[0].value}][?]"
 
 
 @attrs
