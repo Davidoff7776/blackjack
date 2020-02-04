@@ -72,13 +72,10 @@ def email_code(recipient):
         subject="Blackjack Game Email Confirmation Code",
         html_content=code,
     )
-    try:
-        sg = SendGridAPIClient(os.environ.get("SENDGRID_API_KEY"))
-        sg.send(message)
-        print("The confirmation code has been sent to your email address.")
-        return code
-    except Exception as e:
-        print(str(e))
+    sg = SendGridAPIClient(os.environ.get("SENDGRID_API_KEY"))
+    sg.send(message)
+    print("The confirmation code has been sent to your email address.")
+    return code
 
 
 def build_deck():
